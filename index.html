@@ -217,6 +217,14 @@
             <button data-p="0" aria-pressed="false">숨기기</button>
           </div>
         </div>
+        <div class="field">
+          <label>GIF 화질</label>
+          <div class="seg" id="segGif" role="group" aria-label="GIF 화질">
+            <button data-g="900" aria-pressed="false">표준</button>
+            <button data-g="1150" aria-pressed="true">고화질</button>
+            <button data-g="1400" aria-pressed="false">최고</button>
+          </div>
+        </div>
       </div>
 
       <div class="sec">
@@ -243,7 +251,7 @@ const NAMES = "Warm White:FBF7E8|Porcelain:F4F1EC|Eggshell:F0EAD6|Vanilla Milk:F
 
 const MAXN = 4;
 const newSlot = () => ({ img:null, pending:false, scale:1, tx:0, ty:0, colors:[], key:null, locked:false, name:'', rect:null });
-const T = { slots:[newSlot()], ratio:1, k:5, title:'', showNames:true, showPills:true, anim:null };
+const T = { slots:[newSlot()], ratio:1, k:5, title:'', showNames:true, showPills:true, gifCap:1150, anim:null };
 
 const $ = id => document.getElementById(id);
 const app = $('app'), stage = $('stage'), cv = $('card'), ctx = cv.getContext('2d'), fileEl = $('file');
@@ -949,39 +957,50 @@ seg('segK', b => {
 });
 seg('segName', b => { T.showNames = b.dataset.n === '1'; render(); });
 seg('segPill', b => { T.showPills = b.dataset.p === '1'; render(); });
+seg('segGif',  b => { T.gifCap = +b.dataset.g; });
 
 /* ─────────────────────── GIF 인코더 ─────────────────────── */
 
+/* 색 줄이기 — 6비트 히스토그램 + 미디언 컷 + 가장 가까운 색으로 재배정 */
+const QB = 6, QN = 1<<QB, QS = QN*QN*QN;           // 채널당 64단계
+const qHist = new Int32Array(QS);
+const qR = new Float64Array(QS), qG = new Float64Array(QS), qB = new Float64Array(QS);
+const qMap = new Uint8Array(QS);
+let qTouched = [];
+
 function quantize(data, n){
-  const hist = new Int32Array(32768);
-  const sr = new Float64Array(32768), sg = new Float64Array(32768), sb = new Float64Array(32768);
-  const key = i => ((data[i]>>3)<<10) | ((data[i+1]>>3)<<5) | (data[i+2]>>3);
+  for(let i=0;i<qTouched.length;i++){
+    const k = qTouched[i];
+    qHist[k] = 0; qR[k] = 0; qG[k] = 0; qB[k] = 0;
+  }
+  qTouched = [];
+
+  const key = i => ((data[i]>>2)<<12) | ((data[i+1]>>2)<<6) | (data[i+2]>>2);
   for(let i=0, p=0; p<n; p++, i+=4){
     const k = key(i);
-    hist[k]++; sr[k]+=data[i]; sg[k]+=data[i+1]; sb[k]+=data[i+2];
+    if(qHist[k] === 0) qTouched.push(k);
+    qHist[k]++; qR[k]+=data[i]; qG[k]+=data[i+1]; qB[k]+=data[i+2];
   }
-  const all = [];
-  for(let k=0;k<32768;k++) if(hist[k]) all.push(k);
+  const all = qTouched.slice();
 
   const mk = bins => {
-    let count=0, r=0, g=0, b=0, r0=31,r1=0,g0=31,g1=0,b0=31,b1=0;
+    let count=0, r=0, g=0, b=0, r0=QN,r1=-1,g0=QN,g1=-1,b0=QN,b1=-1;
     for(const k of bins){
-      count += hist[k]; r += sr[k]; g += sg[k]; b += sb[k];
-      const R=(k>>10)&31, G=(k>>5)&31, B=k&31;
+      count += qHist[k]; r += qR[k]; g += qG[k]; b += qB[k];
+      const R=(k>>12)&63, G=(k>>6)&63, B=k&63;
       if(R<r0)r0=R; if(R>r1)r1=R; if(G<g0)g0=G; if(G>g1)g1=G; if(B<b0)b0=B; if(B>b1)b1=B;
     }
-    return { bins, count, r, g, b, range:[r1-r0, g1-g0, b1-b0] };
+    const rg = [r1-r0, g1-g0, b1-b0];
+    return { bins, count, r, g, b, range:rg, span:Math.max(rg[0],rg[1],rg[2]) };
   };
   const split = box => {
     const rg = box.range;
     const ch = rg[0]>=rg[1] && rg[0]>=rg[2] ? 0 : (rg[1]>=rg[2] ? 1 : 2);
-    const sh = [10,5,0][ch];
-    const sorted = box.bins.slice().sort((a,b) => ((a>>sh)&31) - ((b>>sh)&31));
-    // 누적이 절반을 넘는 지점에서 자른다.
-    // 마지막 bin 하나가 절반 이상이면 그 bin 만 따로 떼어낸다.
+    const sh = [12,6,0][ch];
+    const sorted = box.bins.slice().sort((a,b) => ((a>>sh)&63) - ((b>>sh)&63));
     let acc = 0, cut = -1;
     for(let i=0;i<sorted.length-1;i++){
-      acc += hist[sorted[i]];
+      acc += qHist[sorted[i]];
       if(acc*2 >= box.count){ cut = i+1; break; }
     }
     if(cut < 1) cut = sorted.length - 1;
@@ -990,22 +1009,41 @@ function quantize(data, n){
 
   let boxes = [mk(all)];
   while(boxes.length < 256){
+    // 절반까지는 화소가 많은 상자를, 그 뒤로는 색 폭까지 함께 본다
+    const wide = boxes.length >= 128;
     let bi = -1, bv = -1;
-    for(let i=0;i<boxes.length;i++)
-      if(boxes[i].bins.length > 1 && boxes[i].count > bv){ bv = boxes[i].count; bi = i; }
+    for(let i=0;i<boxes.length;i++){
+      const x = boxes[i];
+      if(x.bins.length < 2) continue;
+      const v = wide ? x.count*(x.span+1) : x.count;
+      if(v > bv){ bv = v; bi = i; }
+    }
     if(bi < 0) break;
     const two = split(boxes[bi]);
     if(!two[0].bins.length || !two[1].bins.length) break;
     boxes.splice(bi, 1, two[0], two[1]);
   }
 
-  const map = new Uint8Array(32768);
-  const palette = boxes.map((b, i) => {
-    for(const k of b.bins) map[k] = i;
-    return [Math.round(b.r/b.count), Math.round(b.g/b.count), Math.round(b.b/b.count)];
-  });
+  const palette = boxes.map(b => [
+    Math.round(b.r/b.count), Math.round(b.g/b.count), Math.round(b.b/b.count)
+  ]);
+
+  // 각 칸을 제 상자가 아니라 팔레트에서 가장 가까운 색으로 다시 붙인다
+  const P = palette.length;
+  for(const k of all){
+    const r = ((k>>12)&63)*4 + 2, g = ((k>>6)&63)*4 + 2, bl = (k&63)*4 + 2;
+    let bi = 0, bd = Infinity;
+    for(let c=0;c<P;c++){
+      const p = palette[c];
+      const dr=r-p[0], dg=g-p[1], db=bl-p[2];
+      const d = dr*dr*0.9 + dg*dg*1.2 + db*db*0.7;
+      if(d < bd){ bd = d; bi = c; }
+    }
+    qMap[k] = bi;
+  }
+
   const idx = new Uint8Array(n);
-  for(let i=0, p=0; p<n; p++, i+=4) idx[p] = map[key(i)];
+  for(let i=0, p=0; p<n; p++, i+=4) idx[p] = qMap[key(i)];
   return { palette, idx };
 }
 
@@ -1133,7 +1171,7 @@ $('btnGif').addEventListener('click', async () => {
   const ease = t => 1 - Math.pow(1-t, 1.9);
   try{
     const l = layout();
-    const S = Math.min(1, 860/l.W, 1400/l.H);
+    const S = Math.min(1, T.gifCap/l.W, T.gifCap*1.75/l.H);
     const W = Math.round(l.W*S), H = Math.round(l.H*S);
     const cn = document.createElement('canvas');
     cn.width = W; cn.height = H;
