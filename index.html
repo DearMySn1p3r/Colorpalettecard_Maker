@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Palette Card</title>
+<meta name="description" content="그림에서 색을 뽑아 이름 붙은 팔레트 카드로 만들고 PNG·GIF로 저장합니다.">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500&display=swap">
+<!-- 파비콘 · MOMO.png 를 index.html 과 같은 폴더에 두세요 -->
+<link rel="icon" type="image/png" href="MOMO.png">
+<link rel="apple-touch-icon" href="MOMO.png">
+<meta name="theme-color" content="#F2F1EE">
+
+<!-- 링크 공유용 미리보기 -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Color Palette Card">
+<meta property="og:description" content="그림에서 색을 뽑아 팔레트 카드로 만들고 PNG·GIF로 저장합니다.">
+<meta property="og:image" content="MOMO.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Color Palette Card">
+<meta name="twitter:description" content="그림에서 색을 뽑아 팔레트 카드로 만들고 PNG·GIF로 저장합니다.">
+<meta name="twitter:image" content="MOMO.png">
+<style>
+  :root{
+    --bg:#F2F1EE; --panel:#FFFFFF; --ink:#1C1B19; --ink2:#55524D; --mut:#9B9790;
+    --line:#EAE7E1; --line2:#DBD7D0; --r:18px;
+    --track:.22em;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Jost","Pretendard Variable",Pretendard,-apple-system,system-ui,sans-serif;
+    font-size:13.5px; line-height:1.6; -webkit-font-smoothing:antialiased;
+    font-feature-settings:"tnum" 1; overflow:hidden;
+  }
+  button,input{font:inherit;color:inherit}
+  button{background:none;border:0;cursor:pointer}
+  :focus-visible{outline:1px solid var(--ink);outline-offset:3px}
+
+  .app{height:100dvh;display:flex;flex-direction:column;padding:18px;gap:16px}
+
+  /* ── 상단 ───────────────────────────── */
+  header{flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:6px 8px 0}
+  .mark{font-weight:300;font-size:17px;letter-spacing:var(--track);
+    text-transform:uppercase;white-space:nowrap;color:var(--ink)}
+  .hdots{display:flex;gap:6px;align-items:center}
+  .hdots i{width:9px;height:9px;border-radius:50%;display:block;
+    box-shadow:0 0 0 1px rgba(0,0,0,.08) inset;transition:background .4s ease}
+  header .sp{flex:1}
+
+  .btn{height:36px;padding:0 18px;border-radius:20px;border:1px solid var(--line2);
+    background:var(--panel);font-weight:400;font-size:12.5px;letter-spacing:.1em;
+    color:var(--ink2);white-space:nowrap;
+    transition:border-color .2s,color .2s,background .2s}
+  .btn:hover{border-color:var(--ink);color:var(--ink)}
+  .btn[disabled]{opacity:.32;cursor:not-allowed}
+  .btn[disabled]:hover{border-color:var(--line2);color:var(--ink2)}
+  .btn-solid{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .btn-solid:hover{background:#000;color:#fff}
+
+  main{flex:1;min-height:0;display:grid;grid-template-columns:1fr 318px;gap:16px}
+
+  /* ── 미리보기 ───────────────────────── */
+  .stage{position:relative;background:var(--panel);border-radius:var(--r);
+    border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+    padding:30px;overflow:hidden;touch-action:none}
+  #card{display:block;box-shadow:0 1px 3px rgba(0,0,0,.04),0 22px 54px rgba(0,0,0,.09)}
+  #card.grab{cursor:grab}
+  #card.grabbing{cursor:grabbing}
+  .stage::after{content:"";position:absolute;inset:0;border-radius:var(--r);
+    box-shadow:0 0 0 1.5px var(--ink) inset;opacity:0;transition:opacity .15s;pointer-events:none}
+  .app.over .stage::after{opacity:1}
+  .tip{position:absolute;left:20px;bottom:16px;color:var(--mut);font-size:10.5px;
+    letter-spacing:.16em;text-transform:uppercase;transition:opacity .25s;pointer-events:none}
+  .busy{position:absolute;inset:0;background:rgba(255,255,255,.9);display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:16px;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink2)}
+  .app.busy-on .busy{display:flex}
+  .bar{width:190px;height:2px;background:var(--line);overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--ink);transition:width .25s}
+
+  /* ── 오른쪽 메뉴 ────────────────────── */
+  .panel{background:var(--panel);border-radius:var(--r);border:1px solid var(--line);
+    overflow-y:auto;overscroll-behavior:contain}
+  .panel::-webkit-scrollbar{width:8px}
+  .panel::-webkit-scrollbar-thumb{background:#E3E0D9;border-radius:4px}
+  .sec{padding:22px 20px 24px;border-bottom:1px solid var(--line)}
+  .sec:last-child{border-bottom:0}
+  .sec > h2{font-size:10.5px;font-weight:400;letter-spacing:var(--track);
+    text-transform:uppercase;color:var(--mut);margin-bottom:16px}
+
+  .slot{padding:16px 0 18px;border-bottom:1px solid var(--line)}
+  .slot:first-of-type{padding-top:0}
+  .slot:last-of-type{border-bottom:0;padding-bottom:2px}
+  .slot .top{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+  .slot .dot{width:9px;height:9px;border-radius:50%;background:#E8E5DF;flex:0 0 auto;
+    box-shadow:0 0 0 1px rgba(0,0,0,.08) inset;transition:background .3s}
+  .slot .top .sp{flex:1}
+  .slot .top button{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--mut);transition:color .2s}
+  .slot .top button:hover{color:var(--ink)}
+
+  input[type=text]{height:36px;padding:0 2px;border:0;border-bottom:1px solid var(--line2);
+    border-radius:0;background:transparent;width:100%;font-size:14px;letter-spacing:.02em;
+    transition:border-color .2s}
+  input[type=text]:focus{outline:0;border-bottom-color:var(--ink)}
+  input[type=text]::placeholder{color:#C2BEB7;letter-spacing:.01em}
+
+  .swatches{display:flex;flex-direction:column;gap:1px;margin-top:12px}
+  .sw{height:40px;background:var(--c);position:relative;display:flex;
+    align-items:center;justify-content:space-between;padding:0 15px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.07) inset;transition:padding-left .18s}
+  .sw:first-child{border-radius:6px 6px 0 0}
+  .sw:last-child{border-radius:0 0 6px 6px}
+  .sw:hover{padding-left:21px}
+  .sw .nm{font-size:11px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sw .hx{font-size:10.5px;font-weight:300;letter-spacing:.12em;opacity:.78;
+    flex:0 0 auto;padding-left:10px}
+  .sw[aria-pressed="true"]::before{content:"";position:absolute;left:7px;top:50%;
+    width:4px;height:4px;border-radius:50%;background:currentColor;transform:translateY(-50%)}
+  .swatches.ph .sw{background:#F6F4F0;box-shadow:0 0 0 1px var(--line) inset;cursor:default}
+  .swatches.ph .sw:hover{padding-left:15px}
+
+  .add{width:100%;height:44px;border:1px solid var(--line2);border-radius:22px;color:var(--mut);
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;transition:.2s;margin-top:18px}
+  .add:hover{border-color:var(--ink);color:var(--ink)}
+  .add[disabled]{opacity:.35;cursor:not-allowed}
+  .add[disabled]:hover{border-color:var(--line2);color:var(--mut)}
+
+  .field{display:flex;flex-direction:column;gap:9px;margin-bottom:18px}
+  .field:last-child{margin-bottom:0}
+  label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
+  .seg{display:flex;gap:6px}
+  .seg button{flex:1;height:34px;border:1px solid var(--line2);border-radius:17px;
+    color:var(--mut);font-size:11.5px;letter-spacing:.06em;transition:.18s}
+  .seg button:hover{border-color:var(--ink);color:var(--ink)}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .note{font-size:11.5px;color:var(--mut);line-height:1.8;letter-spacing:.01em}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (max-width:920px){
+    .app{padding:12px;gap:12px;height:auto;min-height:100dvh;overflow:auto}
+    .mark{font-size:14px}
+    .hdots{display:none}
+    .btn{padding:0 13px;font-size:11.5px}
+    main{grid-template-columns:1fr;grid-template-rows:min(50dvh,470px) auto}
+    .panel{overflow:visible}
+    .tip{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <header>
+    <span class="mark">Color <em>Palette</em> Card</span>
+    <span class="hdots" id="hdots"></span>
+    <span class="sp"></span>
+    <button class="btn" id="btnCopy" disabled>HEX 복사</button>
+    <button class="btn" id="btnGif" disabled>GIF 저장</button>
+    <button class="btn btn-solid" id="btnPng" disabled>PNG 저장</button>
+  </header>
+
+  <main>
+    <div class="stage" id="stage">
+      <canvas id="card"></canvas>
+      <span class="tip" id="tip">drag to move · scroll to zoom</span>
+      <div class="busy"><span id="busyTxt">making the gif</span><span class="bar"><i id="busyBar"></i></span></div>
+    </div>
+
+    <div class="panel">
+      <div class="sec">
+        <h2>photos</h2>
+        <div id="slots"></div>
+        <button class="add" id="btnAdd">사진 추가</button>
+      </div>
+
+      <div class="sec">
+        <h2>card</h2>
+        <div class="field">
+          <label for="title">제목</label>
+          <input type="text" id="title" placeholder="페어명 · 비워 두면 안 보입니다" maxlength="34">
+        </div>
+        <div class="field">
+          <label>그림 비율</label>
+          <div class="seg" id="segRatio" role="group" aria-label="그림 비율">
+            <button data-r="1" aria-pressed="true">1:1</button>
+            <button data-r="1.25" aria-pressed="false">4:5</button>
+            <button data-r="1.3333" aria-pressed="false">3:4</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>뽑을 색 개수</label>
+          <div class="seg" id="segK" role="group" aria-label="색 개수">
+            <button data-k="4" aria-pressed="false">4</button>
+            <button data-k="5" aria-pressed="true">5</button>
+            <button data-k="6" aria-pressed="false">6</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>색 이름</label>
+          <div class="seg" id="segName" role="group" aria-label="색 이름 표시">
+            <button data-n="1" aria-pressed="true">보이기</button>
+            <button data-n="0" aria-pressed="false">숨기기</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>섞은 색 띠</label>
+          <div class="seg" id="segPill" role="group" aria-label="섞은 색 띠 표시">
+            <button data-p="1" aria-pressed="true">보이기</button>
+            <button data-p="0" aria-pressed="false">숨기기</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">
+        <p class="note">색은 카드에 보이는 부분에서만 뽑습니다. 사진을 옮기거나 확대하면 팔레트도 따라 바뀝니다. 사진은 최대 4장, GIF는 색이 한 줄씩 나타나는 애니메이션으로 저장됩니다.</p>
+      </div>
+    </div>
+  </main>
+
+  <input type="file" id="file" accept="image/*" hidden>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ───────────────────────── 색 이름 사전 ───────────────────────── */
+
+const NAMES = "Warm White:FBF7E8|Porcelain:F4F1EC|Eggshell:F0EAD6|Vanilla Milk:FFF2D0|Lace:FDF6F0|Cotton:F7F7F5|Moonlight:F2F4F8|Frost:EEF3F6|Shell Pink:FBEEE9|Buttercream:FBF0C4|Linen:EDE4D4|Mist:E3E5E4|Dove:D2D4D3|Silver Lining:C8CDD2|Fog:DDE2E4|Ash:B6B8B7|Pebble:9C9E9D|Stone:A9A69F|Taupe:B0A79C|Driftwood:9A8F84|Slate Gray:74787B|Graphite:55585C|Charcoal:3A3D40|Onyx:241929|Ink:1B1C1F|Blush:F7D6DA|Petal:F9C8D2|Cherry Blossom:FADCE4|Pink Panther:F5D0C6|Rose Quartz:EFB6BD|Peony:F19CB0|Bubblegum:F79FC4|Dusty Rose:C98C96|Rosewood:A2606B|Raspberry:C33B5E|Watermelon:F2657B|Coral Pink:F58E7E|Poppy:E23B3B|Scarlet:D62828|Cherry:C1272D|Tomato:E85D3D|Brick:B04A3A|Crimson:A81C34|Claret:840B2A|Dusty Merlot:62202F|Oxblood:4A1420|Peach:FBC7A4|Apricot:F7B26A|Cantaloupe:F9A66C|Tangerine:F58A2E|Marmalade:E2762F|Amber:E09B3D|Clay:B98467|Terracotta:C2704F|Rust:A85A32|Burnt Sienna:8E4A2E|Lemon Chiffon:FFF8CF|Champagne:F2E3C2|Butter Honey:FFDB83|Sunwashed:FFE08A|Daffodil:FFE66D|Wheat:E4CD9B|Golden Hour:F2C14E|Mustard:D4A017|Ochre:B8860B|Almond:E4D3B8|Sand:DCC8A8|Latte:C8A87C|Caramel:B98346|Chestnut:8A5A3B|Cocoa:6F4B36|Walnut:5B4032|Espresso:3E2A21|Pistachio:C7E0A8|Celadon:C6DAC8|Matcha:A9C46C|Sage:A3B18A|Eucalyptus:8FB6A5|Fern:5C8A5C|Basil:4F7942|Olive:7A8450|Moss:6B7A4B|Forest:2F5D45|Pine:1F4436|Mint:BFE3D0|Seafoam:A8D8C4|Jade:3E8E7E|Lagoon:5AA9B0|Teal:2F7C82|Glacier:DCEEF5|Powder Blue:C9DCEB|Dusty Blue:B7C7D9|Dewy Blue:A8C6E7|Aqua:6DD3F7|Sky:8EC5F0|Cerulean:7AB4F9|Morning Breeze:7FA8D6|Cornflower:6D8FE8|Steel Blue:4E7191|Denim:4A6FA5|Horizon:3E668F|Navy:23395B|Midnight:16253D|Lavender Gray:C8CFE8|Periwinkle:A9B4F0|Silky Lilac:AAB4E7|Lilac:C8B6E2|Wisteria:A292C9|Heather:9E8FA8|Iris:7B68C6|Amethyst:8A6FB0|Orchid:C97FC0|Mauve:B08CA0|Plum:6B4A73|Wineshade:5A4864|Aubergine:3D2B3F|Smoke:B9B4AE|Oat:E8DFD0|Bisque:F3DCC4|Salmon:F2A18C|Flamingo:F08A9B|Magnolia:F6EFF7|Pearl:EFEDE6|Alabaster:F1EDE6|Sea Glass:BEDAD4|Meadow:8FAE6E|Cucumber:A7C48B|Storm:6E7A85|Harbor:55636E|Slate Blue:5C6B8A|Blue Hour:34506E|Cloud Puff:FFF7D6|Honeydew:E6F2D0|Rosewater:F8E4E4|Bone:E9E2D6|Truffle:7A6A5B|Cinnamon:9C5B33|Mahogany:6E2F24|Berry:8E2D52|Fig:5A2E44|Velvet:3B2233".split('|').map(s => {
+  const [n, h] = s.split(':');
+  return { n, rgb:[parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)] };
+});
+
+/* ──────────────────────────── 상태 ──────────────────────────── */
+
+const MAXN = 4;
+const newSlot = () => ({ img:null, pending:false, scale:1, tx:0, ty:0, colors:[], key:null, locked:false, name:'', rect:null });
+const T = { slots:[newSlot()], ratio:1, k:5, title:'', showNames:true, showPills:true, anim:null };
+
+const $ = id => document.getElementById(id);
+const app = $('app'), stage = $('stage'), cv = $('card'), ctx = cv.getContext('2d'), fileEl = $('file');
+
+const SANS   = '"Jost", "Pretendard Variable", Pretendard, -apple-system, system-ui, sans-serif';
+const SERIF  = SANS;
+const HANGUL = SANS;
+const PAPER = '#FFFFFF', INK = '#1C1B19';
+
+/* ───────────────────────── 색 계산 도구 ───────────────────────── */
+
+const lum = ([r,g,b]) => (0.2126*r + 0.7152*g + 0.0722*b) / 255;
+const hx  = ([r,g,b]) => '#' + [r,g,b].map(v => Math.round(v).toString(16).padStart(2,'0')).join('').toUpperCase();
+const on  = c => lum(c) > 0.62 ? '#2B2724' : '#FFFFFF';
+const sat = ([r,g,b]) => { const mx=Math.max(r,g,b), mn=Math.min(r,g,b); return mx===0?0:(mx-mn)/mx; };
+const mixAll = l => [0,1,2].map(i => Math.round(l.reduce((a,c) => a+c[i], 0)/l.length));
+const dist2 = (a,b) => { const r=a[0]-b[0], g=a[1]-b[1], bl=a[2]-b[2]; return r*r*0.9 + g*g*1.2 + bl*bl*0.7; };
+
+function nameOf(rgb, used){
+  const sorted = NAMES.map(x => ({ n:x.n, d:dist2(rgb, x.rgb) })).sort((a,b) => a.d - b.d);
+  for(const c of sorted) if(!used.has(c.n)){ used.add(c.n); return c.n; }
+  return sorted[0].n;
+}
+
+/* ─────────────────────── 색 추출 (k-means++) ─────────────────────── */
+
+const off = document.createElement('canvas');
+const octx = off.getContext('2d', { willReadFrequently:true });
+
+function samplePixels(s, fw, fh){
+  const iw = s.img.naturalWidth, ih = s.img.naturalHeight;
+  let sx = Math.max(0, -s.tx/s.scale), sy = Math.max(0, -s.ty/s.scale);
+  let sw = Math.min(iw - sx, fw/s.scale), sh = Math.min(ih - sy, fh/s.scale);
+  if(!(sw > 0 && sh > 0)){ sx = 0; sy = 0; sw = iw; sh = ih; }
+  const N = 150, ar = sw/sh;
+  const ow = Math.max(1, Math.round(ar >= 1 ? N : N*ar));
+  const oh = Math.max(1, Math.round(ar >= 1 ? N/ar : N));
+  off.width = ow; off.height = oh;
+  octx.clearRect(0,0,ow,oh);
+  octx.drawImage(s.img, sx, sy, sw, sh, 0, 0, ow, oh);
+  const d = octx.getImageData(0,0,ow,oh).data, out = [];
+  for(let i=0;i<d.length;i+=4) if(d[i+3] >= 128) out.push([d[i], d[i+1], d[i+2]]);
+  return out;
+}
+
+function kmeans(px, k){
+  if(!px.length) return [];
+  k = Math.min(k, px.length);
+  const cent = [px[(Math.random()*px.length)|0].slice()];
+  const best = new Float64Array(px.length).fill(Infinity);
+  while(cent.length < k){
+    let sum = 0; const c = cent[cent.length-1];
+    for(let i=0;i<px.length;i++){
+      const d = dist2(px[i], c);
+      if(d < best[i]) best[i] = d;
+      sum += best[i];
+    }
+    let t = Math.random()*sum, idx = px.length-1;
+    for(let i=0;i<px.length;i++){ t -= best[i]; if(t <= 0){ idx = i; break; } }
+    cent.push(px[idx].slice());
+  }
+  const asg = new Int32Array(px.length);
+  for(let it=0; it<14; it++){
+    let changed = false;
+    for(let i=0;i<px.length;i++){
+      let bi=0, bd=Infinity;
+      for(let c=0;c<cent.length;c++){ const d = dist2(px[i], cent[c]); if(d < bd){ bd = d; bi = c; } }
+      if(asg[i] !== bi){ asg[i] = bi; changed = true; }
+    }
+    const sr=new Float64Array(cent.length), sg=new Float64Array(cent.length),
+          sb=new Float64Array(cent.length), n=new Float64Array(cent.length);
+    for(let i=0;i<px.length;i++){ const a=asg[i]; sr[a]+=px[i][0]; sg[a]+=px[i][1]; sb[a]+=px[i][2]; n[a]++; }
+    for(let c=0;c<cent.length;c++){
+      if(n[c] === 0){ cent[c] = px[(Math.random()*px.length)|0].slice(); continue; }
+      cent[c] = [sr[c]/n[c], sg[c]/n[c], sb[c]/n[c]];
+    }
+    if(!changed && it > 1) break;
+  }
+  const n = new Float64Array(cent.length);
+  for(let i=0;i<px.length;i++) n[asg[i]]++;
+  return cent
+    .map((c,i) => ({ rgb:c.map(v => Math.round(Math.min(255,Math.max(0,v)))), share:n[i]/px.length }))
+    .filter(c => c.share > 0.004)
+    .sort((a,b) => lum(a.rgb) - lum(b.rgb));
+}
+
+function autoKey(colors){
+  if(!colors.length) return null;
+  let best = colors[0].rgb, bs = -1;
+  for(const c of colors){
+    const l = lum(c.rgb);
+    let p = 1;
+    if(l > 0.93 || l < 0.07) p = 0.12;
+    else if(l > 0.86 || l < 0.13) p = 0.45;
+    const score = (sat(c.rgb)*0.8 + c.share*0.4)*p;
+    if(score > bs){ bs = score; best = c.rgb; }
+  }
+  return best;
+}
+
+function extract(i){
+  const s = T.slots[i];
+  if(!s || !s.img || !s.rect) return;
+  s.colors = kmeans(samplePixels(s, s.rect.w, s.rect.h), T.k);
+  if(s.locked && s.key && s.colors.length){
+    let b = s.colors[0].rgb, bd = Infinity;
+    for(const c of s.colors){ const d = dist2(c.rgb, s.key); if(d < bd){ bd = d; b = c.rgb; } }
+    s.key = b;
+  } else s.key = autoKey(s.colors);
+  paintSlots();
+}
+
+/* ───────────────────────── 카드 레이아웃 ───────────────────────── */
+
+const PAD = 96, GUT = 48, BH = 68, BG = 13, PH = 58, PG = 12, BLEND_H = 94;
+const colWidth = () => [720, 560, 470, 420][T.slots.length - 1];
+
+// 섞은 색 띠에 쓸 색 쌍
+function pillPairs(){
+  const keys = T.slots.filter(s => s.key).map(s => s.key);
+  let P = keys;
+  if(P.length < 2){
+    const s = T.slots.find(v => v.colors.length >= 2);
+    P = s ? s.colors.map(v => v.rgb) : [];
+  }
+  if(P.length < 2) return [];
+  const raw = [[0, P.length-1], [1, P.length-2], [0, 1]];
+  const out = [], seen = new Set();
+  for(const [a,b] of raw){
+    if(a >= P.length || b >= P.length || a >= b) continue;
+    const k = a+'-'+b;
+    if(seen.has(k)) continue;
+    seen.add(k); out.push([P[a], P[b]]);
+    if(out.length === 2) break;
+  }
+  return out;
+}
+
+function layout(){
+  const n = T.slots.length, colW = colWidth();
+  const W = PAD*2 + n*colW + (n-1)*GUT;
+
+  const hasTitle = !!T.title.trim();
+  const hasName  = T.slots.some(s => s.name.trim());
+  const keys = T.slots.filter(s => s.key).map(s => s.key);
+  const counts = T.slots.map(s => s.colors.length).filter(n => n > 0);
+  const rows = counts.length ? Math.max(...counts) : T.k;
+  const pills = T.showPills ? pillPairs() : [];
+
+  let y = PAD;
+  const titleBase = y + 56;
+  if(hasTitle) y += 120;
+
+  const imgY = y, imgH = Math.round(colW*T.ratio);
+  y = imgY + imgH;
+
+  const nameBase = y + 52;
+  y += hasName ? 82 : 46;
+
+  const bandY = y;
+  y += rows*BH + (rows-1)*BG;
+
+  const pillsY = y + 46;
+  if(pills.length) y += 46 + pills.length*PH + (pills.length-1)*PG;
+
+  const showBlend = keys.length >= 2;
+  const blendY = y + (pills.length ? 20 : 46);
+  if(showBlend) y = blendY + BLEND_H;
+
+  const cols = [];
+  for(let i=0;i<n;i++) cols.push({ x: PAD + i*(colW+GUT), w: colW });
+
+  return { W, H: Math.round(y + PAD), colW, cols, hasTitle, titleBase, imgY, imgH,
+           hasName, nameBase, bandY, rows, pills, pillsY, showBlend, blendY, keys };
+}
+let L = layout();
+
+// 애니메이션 단계 수와 각 단계가 바뀌는 영역
+function steps(){
+  const l = layout();
+  const list = [];
+  for(let j=0;j<l.rows;j++) list.push({ y:l.bandY + j*(BH+BG), h:BH });
+  l.pills.forEach((_, p) => list.push({ y:l.pillsY + p*(PH+PG), h:PH }));
+  if(l.showBlend) list.push({ y:l.blendY, h:BLEND_H });
+  return list;
+}
+
+/* ───────────────────────── 카드 그리기 ───────────────────────── */
+
+function rr(c, x, y, w, h, r){
+  r = Math.min(r, w/2, h/2);
+  c.beginPath();
+  if(c.roundRect) c.roundRect(x, y, w, h, r);
+  else {
+    c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+  }
+}
+const shadow = (c,b,o,a) => { c.shadowColor = 'rgba(34,28,20,'+a+')'; c.shadowBlur = b; c.shadowOffsetY = o; };
+const noShadow = c => { c.shadowColor = 'transparent'; c.shadowBlur = 0; c.shadowOffsetY = 0; };
+
+function text(c, str, x, y, size, style, color, align, family, ls){
+  c.font = `${style} ${size}px ${family || SANS}`;
+  c.fillStyle = color; c.textAlign = align || 'left'; c.textBaseline = 'alphabetic';
+  try { c.letterSpacing = (ls||0) + 'px'; } catch(_){}
+  c.fillText(str, x, y);
+  try { c.letterSpacing = '0px'; } catch(_){}
+}
+
+// 카드 가장자리의 얇은 색 띠와 안쪽 테두리
+function edgeStrip(c, W, H){
+  const pool = [];
+  T.slots.forEach(s => s.colors.forEach(v => pool.push(v.rgb)));
+  if(pool.length < 2) return;
+  const g = c.createLinearGradient(0, 0, W, 0);
+  pool.forEach((v, i) => g.addColorStop(i/(pool.length-1), hx(v)));
+  c.fillStyle = g;
+  c.fillRect(0, 0, W, 11);
+  c.fillRect(0, H-11, W, 11);
+}
+
+function innerFrame(c, W, H, key){
+  const m = 34, R = 12;
+  c.strokeStyle = 'rgba(0,0,0,.085)'; c.lineWidth = 1;
+  rr(c, m+.5, m+.5, W-m*2-1, H-m*2-1, R); c.stroke();
+  if(!key) return;
+  const a = 40;
+  c.strokeStyle = hx(key); c.lineWidth = 2; c.lineCap = 'round';
+  const corner = (x, y, dx, dy) => {
+    c.beginPath();
+    c.moveTo(x + dx*a, y); c.lineTo(x + dx*R*0.5, y);
+    c.moveTo(x, y + dy*a); c.lineTo(x, y + dy*R*0.5);
+    c.stroke();
+  };
+  corner(m+1, m+1, 1, 1);
+  corner(W-m-1, m+1, -1, 1);
+  corner(m+1, H-m-1, 1, -1);
+  corner(W-m-1, H-m-1, -1, -1);
+}
+
+function drawPhoto(c, s, x, y, w, h){
+  const R = 26;
+  c.save();
+  shadow(c, 46, 16, .15);
+  c.fillStyle = '#fff'; rr(c, x, y, w, h, R); c.fill();
+  noShadow(c);
+  rr(c, x, y, w, h, R); c.clip();
+  if(s.img){
+    c.imageSmoothingQuality = 'high';
+    c.translate(x + s.tx, y + s.ty); c.scale(s.scale, s.scale);
+    c.drawImage(s.img, 0, 0);
+  } else {
+    c.fillStyle = '#F1EEE8'; c.fillRect(x, y, w, h);
+    c.strokeStyle = '#C8C3B9'; c.lineWidth = 3; c.lineCap = 'round';
+    const cx = x+w/2, cy = y+h/2, a = 26;
+    c.beginPath(); c.moveTo(cx-a,cy); c.lineTo(cx+a,cy); c.moveTo(cx,cy-a); c.lineTo(cx,cy+a); c.stroke();
+  }
+  c.restore();
+  c.strokeStyle = 'rgba(0,0,0,.07)'; c.lineWidth = 1;
+  rr(c, x+.5, y+.5, w-1, h-1, R); c.stroke();
+}
+
+// 색 한 줄 — 이름은 대문자에 넓은 자간, hex 는 가늘게
+function band(c, rgb, x, y, w, h, nm){
+  const fg = on(rgb);
+  c.save(); shadow(c, 18, 6, .07);
+  c.fillStyle = hx(rgb); rr(c, x, y, w, h, h/2); c.fill();
+  c.restore();
+  c.strokeStyle = 'rgba(0,0,0,.08)'; c.lineWidth = 1;
+  rr(c, x+.5, y+.5, w-1, h-1, h/2); c.stroke();
+
+  const padX = h*0.52, mid = y + h/2;
+  const hs = Math.max(12, Math.min(h*0.235, w*0.045));
+  c.font = `300 ${hs}px ${SANS}`;
+  try { c.letterSpacing = (hs*0.16)+'px'; } catch(_){}
+  const hw = c.measureText(hx(rgb)).width + hs*0.16;
+  try { c.letterSpacing = '0px'; } catch(_){}
+
+  if(!nm){                                  // 이름을 끄면 hex 만 가운데로
+    text(c, hx(rgb), x + w/2, mid + hs*0.35, hs, '300', fg, 'center', SANS, hs*0.16);
+    return;
+  }
+  text(c, hx(rgb), x + w - padX, mid + hs*0.35, hs, '300', fg, 'right', SANS, hs*0.16);
+  const up = nm.toUpperCase();
+  let ns = Math.max(12, Math.min(h*0.3, w*0.055));
+  const room = w - padX*2 - hw - 30;
+  const ls = () => ns*0.22;
+  const fits = () => { c.font = `400 ${ns}px ${SANS}`; return c.measureText(up).width + up.length*ls() <= room; };
+  while(!fits() && ns > 9) ns -= 0.5;
+  text(c, up, x + padX, mid + ns*0.35, ns, '400', fg, 'left', SANS, ls());
+}
+
+// 두 색을 잇는 그라데이션 띠
+function pill(c, a, b, x, y, w, h){
+  c.save(); shadow(c, 17, 6, .08);
+  c.fillStyle = '#fff'; rr(c, x, y, w, h, h/2); c.fill();
+  c.restore();
+  const g = c.createLinearGradient(x, 0, x+w, 0);
+  g.addColorStop(0, hx(a)); g.addColorStop(1, hx(b));
+  c.fillStyle = g; rr(c, x, y, w, h, h/2); c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.06)'; c.lineWidth = 1;
+  rr(c, x+.5, y+.5, w-1, h-1, h/2); c.stroke();
+
+  const padX = h*0.52, mid = y + h/2, fs = Math.max(12, Math.min(h*0.26, w*0.042));
+  text(c, hx(a), x + padX, mid + fs*0.35, fs, '300', on(a), 'left', SANS, fs*0.16);
+  text(c, hx(b), x + w - padX, mid + fs*0.35, fs, '300', on(b), 'right', SANS, fs*0.16);
+}
+
+function drawCard(c, scale){
+  L = layout();
+  const A = T.anim;                       // {i, p} — i번째 줄이 p만큼 차오른 상태
+  let step = 0;
+  // 0 = 아직, 1 = 다 보임, 0<v<1 = 왼쪽에서 차오르는 중
+  const grow = () => {
+    const idx = step++;
+    if(!A) return 1;
+    if(idx < A.i) return 1;
+    if(idx === A.i) return A.p;
+    return 0;
+  };
+  const sweep = fn => {
+    const v = grow();
+    if(v <= 0) return;
+    if(v >= 1){ fn(); return; }
+    c.save();
+    c.globalAlpha = v;
+    c.translate(0, (1-v)*14);          // 아래에서 살짝 떠오르며
+    fn();
+    c.restore();
+  };
+
+  c.setTransform(scale,0,0,scale,0,0);
+  c.fillStyle = PAPER; c.fillRect(0, 0, L.W, L.H);
+
+  const keyTone = L.keys.length ? mixAll(L.keys)
+                : (T.slots[0].key ? T.slots[0].key : null);
+  edgeStrip(c, L.W, L.H);
+  innerFrame(c, L.W, L.H, keyTone);
+
+  const used = new Set();
+
+  if(L.hasTitle){
+    const t = T.title.trim().toUpperCase() === T.title.trim() ? T.title.trim() : T.title.trim();
+    text(c, t, L.W/2, L.titleBase, 46, '200', INK, 'center', SANS, 11);
+    const cy = L.titleBase + 34;
+    c.strokeStyle = keyTone ? hx(keyTone) : '#C4C0B8'; c.lineWidth = 1.5; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(L.W/2-22, cy); c.lineTo(L.W/2+22, cy); c.stroke();
+  }
+
+  L.cols.forEach((col, i) => {
+    const s = T.slots[i];
+    s.rect = { x: col.x, y: L.imgY, w: col.w, h: L.imgH };
+    clampSlot(i);
+    drawPhoto(c, s, col.x, L.imgY, col.w, L.imgH);
+    const nm = s.name.trim();
+    if(nm) text(c, nm, col.x + col.w/2, L.nameBase, 22, '300', INK, 'center', SANS, 5);
+  });
+
+  for(let j=0;j<L.rows;j++){
+    const y = L.bandY + j*(BH+BG);
+    if(!A) for(const col of L.cols){
+      const s = T.slots[L.cols.indexOf(col)];
+      if(!s.colors.length){ c.fillStyle = '#F3F0EA'; rr(c, col.x, y, col.w, BH, BH/2); c.fill(); }
+    }
+    sweep(() => {
+      L.cols.forEach((col, i) => {
+        const v = T.slots[i].colors[j];
+        if(v) band(c, v.rgb, col.x, y, col.w, BH, T.showNames ? nameOf(v.rgb, used) : '');
+      });
+    });
+  }
+
+  L.pills.forEach((pr, p) => {
+    const y = L.pillsY + p*(PH+PG);
+    sweep(() => pill(c, pr[0], pr[1], PAD, y, L.W - PAD*2, PH));
+  });
+
+  if(L.showBlend){
+    const b = mixAll(L.keys);
+    sweep(() => band(c, b, PAD, L.blendY, L.W - PAD*2, BLEND_H,
+                     T.showNames ? nameOf(b, used) : ''));
+  }
+}
+
+/* ───────────────────── 미리보기 렌더 & 크기 ───────────────────── */
+
+function render(){
+  L = layout();
+  const box = stage.getBoundingClientRect();
+  const aw = Math.max(80, box.width - 56), ah = Math.max(80, box.height - 56);
+  const fit = Math.min(aw/L.W, ah/L.H);
+  const dw = Math.round(L.W*fit), dh = Math.round(L.H*fit);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.style.width = dw+'px'; cv.style.height = dh+'px';
+  if(cv.width !== Math.round(dw*dpr) || cv.height !== Math.round(dh*dpr)){
+    cv.width = Math.round(dw*dpr); cv.height = Math.round(dh*dpr);
+  }
+  drawCard(ctx, fit*dpr);
+
+  const any = T.slots.some(s => s.img);
+  cv.classList.toggle('grab', any);
+  $('btnPng').disabled = !any; $('btnCopy').disabled = !any; $('btnGif').disabled = !any;
+  $('tip').style.opacity = any ? 1 : 0;
+
+  const hd = $('hdots'), keys = L.keys;
+  hd.innerHTML = '';
+  (keys.length ? keys : []).forEach(k => {
+    const i = document.createElement('i');
+    i.style.background = hx(k); hd.appendChild(i);
+  });
+}
+new ResizeObserver(render).observe(stage);
+window.addEventListener('resize', render);
+
+/* ──────────── 사진 이동·확대 (빈 곳이 생기지 않게 제한) ──────────── */
+
+function cover(s){
+  if(!s.img || !s.rect) return 1;
+  return Math.max(s.rect.w/s.img.naturalWidth, s.rect.h/s.img.naturalHeight);
+}
+function clampSlot(i){
+  const s = T.slots[i];
+  if(!s || !s.img || !s.rect) return;
+  const min = cover(s);
+  s.scale = Math.min(Math.max(s.scale, min), min*12);
+  const w = s.img.naturalWidth*s.scale, h = s.img.naturalHeight*s.scale;
+  s.tx = Math.min(0, Math.max(s.rect.w - w, s.tx));
+  s.ty = Math.min(0, Math.max(s.rect.h - h, s.ty));
+}
+function fitSlot(i){
+  const s = T.slots[i];
+  if(!s || !s.img || !s.rect) return;
+  s.scale = cover(s);
+  s.tx = (s.rect.w - s.img.naturalWidth*s.scale)/2;
+  s.ty = (s.rect.h - s.img.naturalHeight*s.scale)/2;
+  clampSlot(i);
+}
+function reframe(){
+  L = layout();
+  T.slots.forEach((s, i) => {
+    const c = L.cols[i]; if(!c) return;
+    s.rect = { x:c.x, y:L.imgY, w:c.w, h:L.imgH };
+    if(s.img){ clampSlot(i); extract(i); }
+  });
+}
+function toCard(e){
+  const r = cv.getBoundingClientRect();
+  return { x:(e.clientX-r.left)/r.width*L.W, y:(e.clientY-r.top)/r.height*L.H };
+}
+function hit(p){
+  for(let i=0;i<T.slots.length;i++){
+    const r = T.slots[i].rect;
+    if(r && p.x>=r.x && p.x<=r.x+r.w && p.y>=r.y && p.y<=r.y+r.h) return i;
+  }
+  return -1;
+}
+
+const pts = new Map();
+let drag = null, pinch = null;
+
+const two = () => {
+  const a = [...pts.values()];
+  const dx = a[0].x - a[1].x, dy = a[0].y - a[1].y;
+  return { dist: Math.max(1, Math.hypot(dx, dy)), cx:(a[0].x+a[1].x)/2, cy:(a[0].y+a[1].y)/2 };
+};
+const unit = () => L.W / cv.getBoundingClientRect().width;   // 화면 1px 이 카드 몇 단위인지
+
+cv.addEventListener('pointerdown', e => {
+  const i = hit(toCard(e));
+  if(i < 0) return;
+  if(!T.slots[i].img){ openFor(i); return; }
+  cv.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  if(pts.size === 1){
+    drag = { i, x:e.clientX, y:e.clientY };
+    cv.classList.add('grabbing');
+  } else if(pts.size === 2 && drag){
+    const s = T.slots[drag.i], m = two();
+    pinch = { i:drag.i, dist:m.dist, cx:m.cx, cy:m.cy, scale:s.scale, tx:s.tx, ty:s.ty };
+  }
+});
+
+cv.addEventListener('pointermove', e => {
+  if(!pts.has(e.pointerId)) return;
+  pts.set(e.pointerId, { x:e.clientX, y:e.clientY });
+
+  if(pts.size >= 2 && pinch){                   // 두 손가락 — 옮기며 확대
+    const s = T.slots[pinch.i];
+    if(!s || !s.img || !s.rect) return;
+    const m = two(), r = cv.getBoundingClientRect(), k = L.W / r.width;
+    const min = cover(s);
+    const next = Math.min(Math.max(pinch.scale * (m.dist/pinch.dist), min), min*12);
+    const tx = pinch.tx + (m.cx - pinch.cx)*k;
+    const ty = pinch.ty + (m.cy - pinch.cy)*k;
+    const lx = (m.cx - r.left)*k - s.rect.x, ly = (m.cy - r.top)*k - s.rect.y;
+    s.tx = lx - (lx - tx)*(next/pinch.scale);
+    s.ty = ly - (ly - ty)*(next/pinch.scale);
+    s.scale = next;
+    clampSlot(pinch.i); render();
+    return;
+  }
+
+  if(drag){                                     // 한 손가락 — 옮기기
+    const s = T.slots[drag.i];
+    if(!s || !s.img) return;
+    const k = unit();
+    s.tx += (e.clientX-drag.x)*k; s.ty += (e.clientY-drag.y)*k;
+    drag.x = e.clientX; drag.y = e.clientY;
+    clampSlot(drag.i); render();
+  }
+});
+
+function release(e){
+  if(!pts.has(e.pointerId)) return;
+  pts.delete(e.pointerId);
+  if(pts.size < 2) pinch = null;
+  if(pts.size === 0){
+    const i = drag ? drag.i : -1;
+    drag = null; cv.classList.remove('grabbing');
+    if(i >= 0) queue(i);
+  } else if(drag){
+    const a = [...pts.values()][0];
+    drag.x = a.x; drag.y = a.y;                 // 남은 손가락 기준으로 다시 잡기
+  }
+}
+cv.addEventListener('pointerup', release);
+cv.addEventListener('pointercancel', release);
+
+cv.addEventListener('wheel', e => {
+  const p = toCard(e), i = hit(p);
+  if(i < 0 || !T.slots[i].img) return;
+  e.preventDefault();
+  const s = T.slots[i], min = cover(s), prev = s.scale;
+  const next = Math.min(Math.max(prev*Math.exp(-e.deltaY*0.0016), min), min*12);
+  if(next === prev) return;
+  const lx = p.x - s.rect.x, ly = p.y - s.rect.y;
+  s.tx = lx - (lx-s.tx)*(next/prev);
+  s.ty = ly - (ly-s.ty)*(next/prev);
+  s.scale = next;
+  clampSlot(i); render(); queue(i);
+}, { passive:false });
+
+const timers = {};
+function queue(i){
+  clearTimeout(timers[i]);
+  timers[i] = setTimeout(() => { extract(i); render(); }, 170);
+}
+
+/* ───────────────────────── 패널 ───────────────────────── */
+
+const slotsEl = $('slots');
+
+function paintSlots(){
+  const f = document.activeElement;
+  const fi = f && f.dataset && f.dataset.name !== undefined ? +f.dataset.name : -1;
+  const sel = fi >= 0 ? f.selectionStart : 0;
+  const used = new Set();
+
+  slotsEl.innerHTML = '';
+  T.slots.forEach((s, i) => {
+    const el = document.createElement('div');
+    el.className = 'slot';
+    el.innerHTML =
+      '<div class="top"><span class="dot"></span>' +
+      '<input type="text" placeholder="이름 (선택)" maxlength="20" data-name="'+i+'">' +
+      '<span class="sp"></span><button class="pick">사진</button>' +
+      (T.slots.length > 1 ? '<button class="rm">제거</button>' : '') +
+      '</div><div class="swatches"></div>';
+
+    if(s.key) el.querySelector('.dot').style.background = hx(s.key);
+    const inp = el.querySelector('input');
+    inp.value = s.name;
+    inp.addEventListener('input', e => { s.name = e.target.value; render(); });
+    el.querySelector('.pick').addEventListener('click', () => openFor(i));
+    const rm = el.querySelector('.rm');
+    if(rm) rm.addEventListener('click', () => removeSlot(i));
+
+    const wrap = el.querySelector('.swatches');
+    if(!s.colors.length){
+      wrap.classList.add('ph');
+      for(let j=0;j<T.k;j++) wrap.insertAdjacentHTML('beforeend', '<span class="sw"></span>');
+    } else {
+      s.colors.forEach(c => {
+        const h = hx(c.rgb), nm = nameOf(c.rgb, used), fg = on(c.rgb);
+        const b = document.createElement('button');
+        b.className = 'sw'; b.type = 'button'; b.style.setProperty('--c', h);
+        b.style.color = fg;
+        b.title = nm + ' · ' + h + ' · ' + Math.round(c.share*100) + '%';
+        b.setAttribute('aria-pressed', String(!!s.key && hx(s.key) === h));
+        b.innerHTML = '<span class="nm"></span><span class="hx"></span>';
+        b.querySelector('.nm').textContent = nm;
+        b.querySelector('.hx').textContent = h;
+        b.addEventListener('click', () => { s.key = c.rgb; s.locked = true; paintSlots(); render(); });
+        wrap.appendChild(b);
+      });
+    }
+    slotsEl.appendChild(el);
+  });
+
+  $('btnAdd').disabled = T.slots.length >= MAXN;
+  if(fi >= 0){
+    const again = slotsEl.querySelector('input[data-name="'+fi+'"]');
+    if(again){ again.focus(); try { again.setSelectionRange(sel, sel); } catch(_){} }
+  }
+}
+
+/* ─────────────────────── 이미지 불러오기 ─────────────────────── */
+
+let target = 0;
+function openFor(i){ target = i; fileEl.click(); }
+fileEl.addEventListener('change', e => {
+  const f = e.target.files[0]; fileEl.value = '';
+  if(f) loadFile(f, target);
+});
+
+function loadFile(f, i){
+  if(!f || !f.type.startsWith('image/') || i >= T.slots.length) return;
+  const slot = T.slots[i];                    // 번호가 아니라 칸 자체를 기억한다
+  slot.pending = true;
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    slot.pending = false;
+    const idx = T.slots.indexOf(slot);
+    if(idx < 0){ URL.revokeObjectURL(url); return; }   // 그 사이 지워졌으면 버린다
+    if(slot.img && slot.img.src.startsWith('blob:')) URL.revokeObjectURL(slot.img.src);
+    slot.img = img; slot.locked = false;
+    L = layout();
+    slot.rect = { x:L.cols[idx].x, y:L.imgY, w:L.colW, h:L.imgH };
+    fitSlot(idx); extract(idx); render();
+  };
+  img.onerror = () => {
+    slot.pending = false;
+    URL.revokeObjectURL(url);
+    alert('이 파일은 그림으로 열 수 없습니다. 다른 파일을 골라 주세요.');
+  };
+  img.src = url;
+}
+
+function addSlot(open){
+  if(T.slots.length >= MAXN) return -1;
+  T.slots.push(newSlot());
+  reframe(); paintSlots(); render();
+  const i = T.slots.length - 1;
+  if(open) openFor(i);
+  return i;
+}
+function removeSlot(i){
+  const s = T.slots[i];
+  Object.keys(timers).forEach(k => clearTimeout(timers[k]));   // 번호가 밀리므로 예약 취소
+  if(s.img && s.img.src.startsWith('blob:')) URL.revokeObjectURL(s.img.src);
+  T.slots.splice(i, 1);
+  if(!T.slots.length) T.slots.push(newSlot());
+  reframe(); paintSlots(); render();
+}
+$('btnAdd').addEventListener('click', () => addSlot(true));
+
+function intake(files){
+  for(const f of files){
+    // 앞 장이 아직 불러오는 중이어도 칸이 겹치지 않도록 미리 자리를 잡아 둔다
+    let i = T.slots.findIndex(s => !s.img && !s.pending);
+    if(i < 0) i = addSlot(false);
+    if(i < 0) break;
+    T.slots[i].pending = true;
+    loadFile(f, i);
+  }
+}
+['dragenter','dragover'].forEach(t => document.addEventListener(t, e => {
+  e.preventDefault(); app.classList.add('over');
+}));
+['dragleave','drop'].forEach(t => document.addEventListener(t, e => {
+  e.preventDefault();
+  if(t === 'dragleave' && e.relatedTarget) return;
+  app.classList.remove('over');
+}));
+document.addEventListener('drop', e => {
+  const files = e.dataTransfer ? [...e.dataTransfer.files].filter(f => f.type.startsWith('image/')) : [];
+  if(!files.length) return;
+  const i = hit(toCard(e));
+  if(i >= 0 && files.length === 1){ loadFile(files[0], i); return; }
+  intake(files);
+});
+document.addEventListener('paste', e => {
+  if(document.activeElement && document.activeElement.tagName === 'INPUT') return;
+  const items = e.clipboardData && e.clipboardData.items;
+  if(!items) return;
+  for(const it of items) if(it.type.startsWith('image/')){ intake([it.getAsFile()]); break; }
+});
+
+/* ───────────────────────── 컨트롤 ───────────────────────── */
+
+$('title').addEventListener('input', e => { T.title = e.target.value; render(); });
+const seg = (id, fn) => $(id).addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  [...e.currentTarget.children].forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  fn(b);
+});
+seg('segRatio', b => { T.ratio = +b.dataset.r; reframe(); render(); });
+seg('segK', b => {
+  T.k = +b.dataset.k;
+  T.slots.forEach((s, i) => { if(s.img) extract(i); });
+  paintSlots(); render();
+});
+seg('segName', b => { T.showNames = b.dataset.n === '1'; render(); });
+seg('segPill', b => { T.showPills = b.dataset.p === '1'; render(); });
+
+/* ─────────────────────── GIF 인코더 ─────────────────────── */
+
+function quantize(data, n){
+  const hist = new Int32Array(32768);
+  const sr = new Float64Array(32768), sg = new Float64Array(32768), sb = new Float64Array(32768);
+  const key = i => ((data[i]>>3)<<10) | ((data[i+1]>>3)<<5) | (data[i+2]>>3);
+  for(let i=0, p=0; p<n; p++, i+=4){
+    const k = key(i);
+    hist[k]++; sr[k]+=data[i]; sg[k]+=data[i+1]; sb[k]+=data[i+2];
+  }
+  const all = [];
+  for(let k=0;k<32768;k++) if(hist[k]) all.push(k);
+
+  const mk = bins => {
+    let count=0, r=0, g=0, b=0, r0=31,r1=0,g0=31,g1=0,b0=31,b1=0;
+    for(const k of bins){
+      count += hist[k]; r += sr[k]; g += sg[k]; b += sb[k];
+      const R=(k>>10)&31, G=(k>>5)&31, B=k&31;
+      if(R<r0)r0=R; if(R>r1)r1=R; if(G<g0)g0=G; if(G>g1)g1=G; if(B<b0)b0=B; if(B>b1)b1=B;
+    }
+    return { bins, count, r, g, b, range:[r1-r0, g1-g0, b1-b0] };
+  };
+  const split = box => {
+    const rg = box.range;
+    const ch = rg[0]>=rg[1] && rg[0]>=rg[2] ? 0 : (rg[1]>=rg[2] ? 1 : 2);
+    const sh = [10,5,0][ch];
+    const sorted = box.bins.slice().sort((a,b) => ((a>>sh)&31) - ((b>>sh)&31));
+    // 누적이 절반을 넘는 지점에서 자른다.
+    // 마지막 bin 하나가 절반 이상이면 그 bin 만 따로 떼어낸다.
+    let acc = 0, cut = -1;
+    for(let i=0;i<sorted.length-1;i++){
+      acc += hist[sorted[i]];
+      if(acc*2 >= box.count){ cut = i+1; break; }
+    }
+    if(cut < 1) cut = sorted.length - 1;
+    return [mk(sorted.slice(0,cut)), mk(sorted.slice(cut))];
+  };
+
+  let boxes = [mk(all)];
+  while(boxes.length < 256){
+    let bi = -1, bv = -1;
+    for(let i=0;i<boxes.length;i++)
+      if(boxes[i].bins.length > 1 && boxes[i].count > bv){ bv = boxes[i].count; bi = i; }
+    if(bi < 0) break;
+    const two = split(boxes[bi]);
+    if(!two[0].bins.length || !two[1].bins.length) break;
+    boxes.splice(bi, 1, two[0], two[1]);
+  }
+
+  const map = new Uint8Array(32768);
+  const palette = boxes.map((b, i) => {
+    for(const k of b.bins) map[k] = i;
+    return [Math.round(b.r/b.count), Math.round(b.g/b.count), Math.round(b.b/b.count)];
+  });
+  const idx = new Uint8Array(n);
+  for(let i=0, p=0; p<n; p++, i+=4) idx[p] = map[key(i)];
+  return { palette, idx };
+}
+
+function lzw(minCode, idx){
+  if(!idx.length) return [];
+  const clear = 1<<minCode, eoi = clear+1;
+  let size = minCode+1, next = eoi+1, dict = new Map();
+  const out = [];
+  let cur = 0, bits = 0;
+  const put = (code, n) => {
+    cur |= code << bits; bits += n;
+    while(bits >= 8){ out.push(cur & 255); cur >>= 8; bits -= 8; }
+  };
+  put(clear, size);
+  let prefix = idx[0];
+  for(let i=1;i<idx.length;i++){
+    const k = idx[i], key = prefix*4096 + k, got = dict.get(key);
+    if(got !== undefined){ prefix = got; continue; }
+    put(prefix, size);
+    if(next < 4096){
+      dict.set(key, next++);
+      if(next > (1<<size) && size < 12) size++;
+    } else {
+      put(clear, size);
+      dict = new Map(); next = eoi+1; size = minCode+1;
+    }
+    prefix = k;
+  }
+  put(prefix, size); put(eoi, size);
+  if(bits > 0) out.push(cur & 255);
+  return out;
+}
+
+function GIF(W, H){
+  const out = [];
+  const u16 = v => { out.push(v & 255, (v>>8) & 255); };
+  out.push(0x47,0x49,0x46,0x38,0x39,0x61);
+  u16(W); u16(H); out.push(0x70, 0, 0);
+  out.push(0x21, 0xFF, 0x0B);
+  for(const ch of 'NETSCAPE2.0') out.push(ch.charCodeAt(0));
+  out.push(0x03, 0x01, 0x00, 0x00, 0x00);
+  return {
+    frame(data, x, y, w, h, delay){
+      if(w <= 0 || h <= 0) return;
+      const q = quantize(data, w*h);
+      let bits = 1;
+      while((1<<bits) < q.palette.length) bits++;
+      out.push(0x21, 0xF9, 0x04, 0x04, delay & 255, (delay>>8) & 255, 0x00, 0x00);
+      out.push(0x2C); u16(x); u16(y); u16(w); u16(h);
+      out.push(0x80 | (bits-1));
+      const size = 1<<bits;
+      for(let i=0;i<size;i++){
+        const p = q.palette[i] || [0,0,0];
+        out.push(p[0], p[1], p[2]);
+      }
+      const mc = Math.max(2, bits);
+      out.push(mc);
+      const bytes = lzw(mc, q.idx);
+      for(let i=0;i<bytes.length;i+=255){
+        const end = Math.min(i+255, bytes.length);
+        out.push(end-i);
+        for(let j=i;j<end;j++) out.push(bytes[j]);
+      }
+      out.push(0);
+    },
+    finish(){ out.push(0x3B); return Uint8Array.from(out); }
+  };
+}
+
+/* ───────────────────────── 내보내기 ───────────────────────── */
+
+function fileName(ext){
+  const nm = (T.title.trim() || T.slots.map(s => s.name.trim()).filter(Boolean).join('-'))
+    .replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+  return (nm || 'palette-card') + '.' + ext;
+}
+function save(href, name){
+  const a = document.createElement('a');
+  a.download = name; a.href = href; a.click();
+}
+
+function copy(t){
+  const done = () => { const b = $('btnCopy'); b.textContent = '복사됨'; setTimeout(() => b.textContent = 'HEX 복사', 900); };
+  if(navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(t).then(done, fb);
+  else fb();
+  function fb(){
+    const a = document.createElement('textarea');
+    a.value = t; a.style.position='fixed'; a.style.opacity='0';
+    document.body.appendChild(a); a.select();
+    try { document.execCommand('copy'); done(); } catch(_){}
+    a.remove();
+  }
+}
+$('btnCopy').addEventListener('click', () => {
+  const used = new Set(), out = [];
+  T.slots.forEach(s => {
+    if(!s.colors.length) return;
+    if(s.name.trim()) out.push(s.name.trim());
+    s.colors.forEach(c => out.push(hx(c.rgb) + '  ' + nameOf(c.rgb, used)));
+    out.push('');
+  });
+  const keys = T.slots.filter(s => s.key).map(s => s.key);
+  if(keys.length >= 2){ const b = mixAll(keys); out.push(hx(b) + '  ' + nameOf(b, used)); }
+  if(out.length) copy(out.join('\n').trim());
+});
+
+$('btnPng').addEventListener('click', () => {
+  const l = layout(), SC = 2;
+  const c = document.createElement('canvas');
+  c.width = l.W*SC; c.height = l.H*SC;
+  drawCard(c.getContext('2d'), SC);
+  save(c.toDataURL('image/png'), fileName('png'));
+});
+
+const sleep = () => new Promise(r => setTimeout(r, 0));
+
+$('btnGif').addEventListener('click', async () => {
+  const btn = $('btnGif');
+  if(btn.disabled) return;
+  btn.disabled = true;
+  app.classList.add('busy-on');
+  const bar = $('busyBar');
+
+  const K = 4;                                  // 한 줄이 떠오르는 단계 수
+  const ease = t => 1 - Math.pow(1-t, 1.9);
+  try{
+    const l = layout();
+    const S = Math.min(1, 860/l.W, 1400/l.H);
+    const W = Math.round(l.W*S), H = Math.round(l.H*S);
+    const cn = document.createElement('canvas');
+    cn.width = W; cn.height = H;
+    const cx = cn.getContext('2d', { willReadFrequently:true });
+
+    const list = steps();
+    const g = GIF(W, H);
+    const total = list.length*K + 1;
+    let done = 0;
+
+    // 첫 장 — 색 줄이 아직 하나도 없는 상태
+    T.anim = { i:0, p:0 };
+    drawCard(cx, S);
+    g.frame(cx.getImageData(0,0,W,H).data, 0, 0, W, H, 28);
+
+    const x = Math.max(0, Math.round((PAD - 14)*S));
+    const w = Math.min(W - x, Math.round((l.W - PAD*2 + 28)*S));
+
+    for(let e=0; e<list.length; e++){
+      const it = list[e];
+      const y = Math.max(0, Math.round((it.y - 34)*S));
+      const h = Math.min(H - y, Math.round((it.h + 60)*S));
+      for(let k=1; k<=K; k++){
+        T.anim = { i:e, p:ease(k/K) };
+        drawCard(cx, S);
+        const last = (e === list.length-1) && (k === K);
+        const delay = last ? 80 : (k === K ? 11 : 4);   // 1/100초 단위
+        g.frame(cx.getImageData(x, y, w, h).data, x, y, w, h, delay);
+        bar.style.width = Math.round((++done)/total*100) + '%';
+        await sleep();
+      }
+    }
+
+    const blob = new Blob([g.finish()], { type:'image/gif' });
+    const url = URL.createObjectURL(blob);
+    save(url, fileName('gif'));
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  } catch(err){
+    console.error(err);
+    alert('GIF를 만들지 못했습니다. 사진 수나 색 개수를 줄이고 다시 시도해 주세요.');
+  } finally {
+    T.anim = null;
+    app.classList.remove('busy-on');
+    bar.style.width = '0%';
+    btn.disabled = false;
+    render();
+  }
+});
+
+/* ───────────────────────── 시작 ───────────────────────── */
+
+paintSlots();
+render();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>
